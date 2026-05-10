@@ -47,7 +47,7 @@ const emptyLine = (id) => ({
 id, plan: "", hikari: "none", card: "none", denki: false,
 tvOption: false, telOption: "none", kakehoudai: "none",
 useDevice: false, selectedDevice: "", contractType: "mnp", useKaedoki: false,
-name: "",
+name: "", currentFee: "",
 });
 
 function calcKaedoki(device, contractType) {
@@ -280,6 +280,8 @@ const totalDevice  = Object.values(deviceResults).reduce((s, dr) => {
   if (dr.useKaedoki) return s + dr.kaedoki.monthly;
   return s + Math.ceil(dr.kaedoki.priceAfterDisc / 24);
 }, 0);
+const totalCurrentFee  = lineList.reduce((s, l) => s + (Number(l.currentFee) || 0), 0);
+const hasAnyCurrentFee = lineList.some(l => Number(l.currentFee) > 0);
 
 return (
 <div style={{ minHeight: "100vh", background: "#08080e", fontFamily: "‘Noto Sans JP’,‘Hiragino Kaku Gothic ProN’,sans-serif", color: "#e4e4f0", padding: "20px 14px 48px" }}>
@@ -502,6 +504,26 @@ return (
       )}
     </Card>
 
+    {/* 現在料金との比較 */}
+    <Card title="📊 現在料金との比較">
+      <p style={{ margin: "0 0 6px", fontSize: 11, color: "#555" }}>現在の月額料金（税込・回線のみ）</p>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 14, color: "#666" }}>¥</span>
+        <input
+          type="number"
+          min="0"
+          placeholder="例: 8000"
+          value={activeLine.currentFee}
+          onChange={e => setActive("currentFee", e.target.value)}
+          style={{ flex: 1, padding: "8px 10px", background: "#080810", border: "1px solid #1c1c28", borderRadius: 7, color: "#e4e4f0", fontSize: 14, outline: "none", fontFamily: "inherit" }}
+        />
+        <span style={{ fontSize: 11, color: "#555" }}>/月</span>
+      </div>
+      {Number(activeLine.currentFee) > 0 && (
+        <p style={{ margin: "6px 0 0", fontSize: 10, color: "#444" }}>年額: ¥{(Number(activeLine.currentFee) * 12).toLocaleString()}</p>
+      )}
+    </Card>
+
     {error && <div style={{ background: "#1a0606", border: "1px solid #550000", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#ff6666" }}>{error}</div>}
 
     <button onClick={calculate} style={{ width: "100%", padding: "15px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#e60012,#cc0010)", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 20px rgba(230,0,18,0.35)" }}>
@@ -543,6 +565,31 @@ return (
                   <span style={{ fontSize: 13, fontWeight: 700, color: "#ffaa33" }}>¥{totalInitial.toLocaleString()}</span>
                 </div>
               </div>
+              {hasAnyCurrentFee && (() => {
+                const diff = (totalMonthly + totalDevice) - totalCurrentFee;
+                const saving = diff < 0;
+                const allHaveFee = lineList.every(l => Number(l.currentFee) > 0);
+                return (
+                  <div style={{ marginTop: 10, padding: "12px 14px", background: saving ? "#091a0d" : "#1a0909", borderRadius: 10, border: `1px solid ${saving ? "#1a3a22" : "#3a1a1a"}` }}>
+                    <p style={{ margin: "0 0 6px", fontSize: 11, fontWeight: 700, color: saving ? "#44cc77" : "#cc5555" }}>
+                      {saving ? "💰 家族まとめてお得！" : "⚠️ 家族合計で現在より高くなります"}
+                    </p>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
+                      <span style={{ fontSize: 11, color: "#555" }}>現在の合計月額</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#888" }}>¥{totalCurrentFee.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
+                      <span style={{ fontSize: 11, color: "#555" }}>ドコモ後の合計月額</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#e4e4f0" }}>¥{(totalMonthly + totalDevice).toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, paddingTop: 6, borderTop: `1px solid ${saving ? "#1a3a22" : "#3a1a1a"}` }}>
+                      <span style={{ fontSize: 12, color: saving ? "#336644" : "#664433" }}>年間{saving ? "節約額" : "増加額"}</span>
+                      <span style={{ fontSize: 20, fontWeight: 800, color: saving ? "#44ee88" : "#ee5555" }}>{saving ? "−" : "+"}¥{(Math.abs(diff) * 12).toLocaleString()}</span>
+                    </div>
+                    {!allHaveFee && <p style={{ margin: "5px 0 0", fontSize: 10, color: "#444" }}>※ 現在料金未入力の回線は0円として計算</p>}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -562,6 +609,46 @@ return (
               {(isAct || lineList.length === 1) && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {dr && <KaedokiResultCard dr={dr} planMonthly={r.monthlyTotal} />}
+                  {Number(line.currentFee) > 0 && (() => {
+                    const deviceMonthly = dr ? (dr.useKaedoki ? dr.kaedoki.monthly : Math.ceil(dr.kaedoki.priceAfterDisc / 24)) : 0;
+                    const newFee = r.monthlyTotal + deviceMonthly;
+                    const current = Number(line.currentFee);
+                    const diff = newFee - current;
+                    const saving = diff < 0;
+                    return (
+                      <div style={{ background: "#0e0e14", border: `2px solid ${saving ? "#22cc6633" : "#cc222233"}`, borderRadius: 12, overflow: "hidden" }}>
+                        <div style={{ padding: "10px 20px", borderBottom: `1px solid ${saving ? "#1a2a1a" : "#2a1a1a"}`, background: saving ? "#091209" : "#120909" }}>
+                          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: saving ? "#44cc77" : "#cc5555", letterSpacing: "0.08em" }}>
+                            {saving ? "💰 乗り換えでお得！" : "⚠️ 現在より高くなります"}
+                          </p>
+                        </div>
+                        <div style={{ padding: "14px 20px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #141420" }}>
+                            <span style={{ fontSize: 12, color: "#666" }}>現在の月額</span>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: "#888" }}>¥{current.toLocaleString()}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "1px solid #141420" }}>
+                            <span style={{ fontSize: 12, color: "#666" }}>ドコモ後{deviceMonthly > 0 ? "（端末込み）" : ""}</span>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: "#e4e4f0" }}>¥{newFee.toLocaleString()}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0" }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: saving ? "#44cc77" : "#cc5555" }}>月々の差額</span>
+                            <span style={{ fontSize: 28, fontWeight: 800, color: saving ? "#44cc77" : "#cc5555", lineHeight: 1 }}>
+                              {saving ? "−" : "+"}¥{Math.abs(diff).toLocaleString()}
+                            </span>
+                          </div>
+                          <div style={{ padding: "10px 14px", background: saving ? "#091a0d" : "#1a0909", borderRadius: 8, border: `1px solid ${saving ? "#1a3a22" : "#3a1a1a"}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontSize: 12, color: saving ? "#336644" : "#664433" }}>年間{saving ? "節約額" : "増加額"}</span>
+                              <span style={{ fontSize: 22, fontWeight: 800, color: saving ? "#44ee88" : "#ee5555" }}>
+                                {saving ? "−" : "+"}¥{(Math.abs(diff) * 12).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <ResultCard title={lineList.length > 1 ? `回線${idx+1}${line.name ? `（${line.name}）` : ""} 月額料金` : "月額料金（税込）"}>
                     <div style={{ padding: "14px 20px 4px" }}>
                       <p style={{ margin: "0 0 4px", fontSize: 11, color: "#555" }}>通常月額（回線のみ）</p>
