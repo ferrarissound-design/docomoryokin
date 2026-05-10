@@ -204,7 +204,22 @@ const daysInMonth = getDaysInCurrentMonth();
 const activeLine  = lineList.find(l => l.id === activeLineId) || lineList[0];
 
 const setActive = (field, value) => {
-setLineList(prev => prev.map(l => l.id === activeLineId ? { ...l, [field]: value } : l));
+setLineList(prev => prev.map(l => {
+  if (l.id !== activeLineId) return l;
+  const updated = { ...l, [field]: value };
+  if (field === "plan") {
+    const newPlan = PLANS.find(p => p.id === value);
+    const newIsAhamo = newPlan?.type === "ahamo";
+    const newIsU15   = newPlan?.type === "u15";
+    const hikari = HIKARI.find(h => h.id === updated.hikari);
+    const hikariInvalid =
+      (newIsU15 && updated.hikari === "family") ||
+      (newIsAhamo && hikari?.notAhamo) ||
+      (!newIsAhamo && hikari?.ahamoOnly);
+    if (hikariInvalid) updated.hikari = "none";
+  }
+  return updated;
+}));
 setResults({}); setDeviceResults({});
 };
 
@@ -260,7 +275,11 @@ const isU15      = selPlan?.type === "u15";
 const hasResults = Object.keys(results).length > 0;
 const totalMonthly = Object.values(results).reduce((s, r) => s + (r?.monthlyTotal || 0), 0);
 const totalInitial = Object.values(results).reduce((s, r) => s + (r?.initialTotal || 0), 0);
-const totalDevice  = Object.values(deviceResults).reduce((s, dr) => s + (dr?.useKaedoki ? dr.kaedoki.monthly : 0), 0);
+const totalDevice  = Object.values(deviceResults).reduce((s, dr) => {
+  if (!dr) return s;
+  if (dr.useKaedoki) return s + dr.kaedoki.monthly;
+  return s + Math.ceil(dr.kaedoki.priceAfterDisc / 24);
+}, 0);
 
 return (
 <div style={{ minHeight: "100vh", background: "#08080e", fontFamily: "‘Noto Sans JP’,‘Hiragino Kaku Gothic ProN’,sans-serif", color: "#e4e4f0", padding: "20px 14px 48px" }}>
