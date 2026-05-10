@@ -89,7 +89,10 @@ const lbl = isAhamoHikari ? "ahamo光 契約事務手数料" : isHome5G ? "home 
 initial.push({ label: lbl, amount: 4950 });
 }
 
-monthly.push({ label: hasUWari ? "ドコモMAX（無制限）" : plan.label, amount: hasUWari ? plan.basePrice : (plan.basePrice ?? plan.price), type: "base", hiwari: true });
+const baseLabel = hasUWari
+  ? (plan.id.endsWith("_over") ? "ドコモMAX（無制限）" : "ドコモMAX（〜30GB・段階制）")
+  : plan.label;
+monthly.push({ label: baseLabel, amount: hasUWari ? plan.basePrice : (plan.basePrice ?? plan.price), type: "base", hiwari: true });
 
 if (isU15) {
 monthly.push({ label: "U15はじめてスマホISP割（自動適用）", amount: plan.ispDisc, type: "discount", hiwari: true });
