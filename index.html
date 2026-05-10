@@ -4,6 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ドコモ料金シミュレーター</title>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #results, #results * { visibility: visible; }
+      .no-print { display: none !important; }
+      #results {
+        position: absolute; left: 0; top: 0;
+        width: 100%; max-width: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      #results * {
+        background: white !important;
+        color: #111 !important;
+        border-color: #ccc !important;
+      }
+      #results [style*="color: #44cc77"],
+      #results [style*="color: #44ee88"] { color: #1a7a3a !important; }
+      #results [style*="color: #ff"],
+      #results [style*="color: #cc"] { color: #cc0010 !important; }
+    }
+  </style>
   </head>
   <body>
     <div id="root"></div>
