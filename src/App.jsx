@@ -190,15 +190,46 @@ const now = new Date();
 return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 }
 
+function encodeState(lineList, showHiwari, contractDay, nextId) {
+const l = lineList.map(l => [
+  l.id, l.plan, l.hikari, l.card, l.denki ? 1 : 0,
+  l.tvOption ? 1 : 0, l.telOption, l.kakehoudai,
+  l.useDevice ? 1 : 0, l.selectedDevice, l.contractType,
+  l.useKaedoki ? 1 : 0, l.name, l.currentFee,
+]);
+return btoa(encodeURIComponent(JSON.stringify({ l, h: showHiwari ? 1 : 0, d: contractDay, n: nextId })));
+}
+
+function decodeState(encoded) {
+try {
+  const s = JSON.parse(decodeURIComponent(atob(encoded)));
+  return {
+    lineList: s.l.map(r => ({
+      id: r[0], plan: r[1], hikari: r[2], card: r[3], denki: !!r[4],
+      tvOption: !!r[5], telOption: r[6], kakehoudai: r[7], useDevice: !!r[8],
+      selectedDevice: r[9], contractType: r[10], useKaedoki: !!r[11],
+      name: r[12], currentFee: r[13],
+    })),
+    showHiwari: !!s.h, contractDay: s.d, nextId: s.n,
+  };
+} catch { return null; }
+}
+
+const urlState = (() => {
+const p = new URLSearchParams(window.location.search).get("s");
+return p ? decodeState(p) : null;
+})();
+
 export default function DocomoSimulator() {
-const [lineList, setLineList]           = useState([emptyLine(1)]);
-const [activeLineId, setActiveLineId]   = useState(1);
+const [lineList, setLineList]           = useState(urlState?.lineList || [emptyLine(1)]);
+const [activeLineId, setActiveLineId]   = useState(urlState?.lineList?.[0]?.id || 1);
 const [results, setResults]             = useState({});
 const [deviceResults, setDeviceResults] = useState({});
 const [error, setError]                 = useState("");
-const [nextId, setNextId]               = useState(2);
-const [showHiwari, setShowHiwari]       = useState(false);
-const [contractDay, setContractDay]     = useState(1);
+const [nextId, setNextId]               = useState(urlState?.nextId || 2);
+const [showHiwari, setShowHiwari]       = useState(urlState?.showHiwari || false);
+const [contractDay, setContractDay]     = useState(urlState?.contractDay || 1);
+const [copied, setCopied]               = useState(false);
 
 const daysInMonth = getDaysInCurrentMonth();
 const activeLine  = lineList.find(l => l.id === activeLineId) || lineList[0];
@@ -532,7 +563,22 @@ return (
 
     {/* 結果エリア */}
     {hasResults && (
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div id="results" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="no-print" style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={() => {
+            const url = `${location.origin}${location.pathname}?s=${encodeState(lineList, showHiwari, contractDay, nextId)}`;
+            navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); });
+          }}
+          style={{ flex: 1, padding: "11px", borderRadius: 8, border: `1px solid ${copied ? "#336633" : "#1c1c28"}`, background: copied ? "#0a1a0a" : "#0f0f17", color: copied ? "#44cc77" : "#aaa", fontSize: 13, cursor: "pointer", transition: "all 0.2s" }}>
+          {copied ? "✓ URLをコピーしました" : "🔗 URLで共有"}
+        </button>
+        <button
+          onClick={() => window.print()}
+          style={{ flex: 1, padding: "11px", borderRadius: 8, border: "1px solid #1c1c28", background: "#0f0f17", color: "#aaa", fontSize: 13, cursor: "pointer" }}>
+          🖨️ 印刷・PDF保存
+        </button>
+      </div>
         {lineList.length > 1 && (
           <div style={{ background: "#0e0e14", border: "2px solid #e6001244", borderRadius: 12, overflow: "hidden" }}>
             <div style={{ padding: "10px 20px", background: "linear-gradient(135deg,#1a0306,#0e0e14)", borderBottom: "1px solid #2a1010" }}>
