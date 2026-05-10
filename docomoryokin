@@ -185,7 +185,10 @@ const u15Info = isU15 ? { dataGB: plan.dataGB, dataAfter19: plan.dataAfter19, du
 return { monthly, monthlyTotal, initial, initialTotal, totalDiscount, notes, uWariInfo, u15Info };
 }
 
-function getDaysInCurrentMonth() { return 31; }
+function getDaysInCurrentMonth() {
+const now = new Date();
+return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+}
 
 export default function DocomoSimulator() {
 const [lineList, setLineList]           = useState([emptyLine(1)]);
@@ -200,18 +203,16 @@ const [contractDay, setContractDay]     = useState(1);
 const daysInMonth = getDaysInCurrentMonth();
 const activeLine  = lineList.find(l => l.id === activeLineId) || lineList[0];
 
-// FIX1: …l (三点リーダ→半角スプレッド)
 const setActive = (field, value) => {
-setLineList(prev => prev.map(l => l.id === activeLineId ? { …l, [field]: value } : l));
+setLineList(prev => prev.map(l => l.id === activeLineId ? { ...l, [field]: value } : l));
 setResults({}); setDeviceResults({});
 };
 
-// FIX2: …prev (三点リーダ→半角スプレッド)
 const addLine = () => {
 if (lineList.length >= 5) return;
 const newId = nextId;
 setNextId(newId + 1);
-setLineList(prev => […prev, emptyLine(newId)]);
+setLineList(prev => [...prev, emptyLine(newId)]);
 setActiveLineId(newId);
 setResults({}); setDeviceResults({});
 };
@@ -248,10 +249,9 @@ setResults(newResults); setDeviceResults(newDevResults);
 
 const fmt = n => n === 0 ? “¥0（込み）” : (n < 0 ? “\u2212” : “”) + “¥” + Math.abs(n).toLocaleString();
 
-// FIX3: …item (三点リーダ→半角スプレッド)
 const calcHiwariItems = (items) => {
 const remaining = daysInMonth - contractDay + 1;
-return items.map(item => ({ …item, hiwariAmount: item.hiwari ? Math.round(item.amount / daysInMonth * remaining) : item.amount }));
+return items.map(item => ({ ...item, hiwariAmount: item.hiwari ? Math.round(item.amount / daysInMonth * remaining) : item.amount }));
 };
 
 const selPlan    = PLANS.find(p => p.id === activeLine.plan);
@@ -262,7 +262,6 @@ const totalMonthly = Object.values(results).reduce((s, r) => s + (r?.monthlyTota
 const totalInitial = Object.values(results).reduce((s, r) => s + (r?.initialTotal || 0), 0);
 const totalDevice  = Object.values(deviceResults).reduce((s, dr) => s + (dr?.useKaedoki ? dr.kaedoki.monthly : 0), 0);
 
-// FIX4: Markdownコードブロック ``` を削除、returnのJSXを直接記述
 return (
 <div style={{ minHeight: “100vh”, background: “#08080e”, fontFamily: “‘Noto Sans JP’,‘Hiragino Kaku Gothic ProN’,sans-serif”, color: “#e4e4f0”, padding: “20px 14px 48px” }}>
 <div style={{ textAlign: “center”, marginBottom: 20 }}>
@@ -271,7 +270,6 @@ return (
 <p style={{ margin: “4px 0 0”, fontSize: 10, color: “#555” }}>2025年6月〜現行プラン対応 ／ 端末価格2026年4月17日以降</p>
 </div>
 
-```
   <div style={{ maxWidth: 460, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
 
     {/* 回線管理 */}
@@ -615,7 +613,6 @@ return (
     <p style={{ textAlign: "center", fontSize: 10, color: "#2a2a2a", marginTop: 4 }}>※本シミュレーターは概算です。実際の料金は公式サイトでご確認ください。</p>
   </div>
 </div>
-```
 
 );
 }
