@@ -47,7 +47,7 @@ const emptyLine = (id) => ({
 id, plan: "", hikari: "none", card: "none", denki: false,
 tvOption: false, telOption: "none", kakehoudai: "none",
 useDevice: false, selectedDevice: "", contractType: "mnp", useKaedoki: false,
-name: "", currentFee: "",
+name: "", currentFee: "", familyCount: "1",
 });
 
 function calcKaedoki(device, contractType) {
@@ -61,13 +61,13 @@ const totalIfReturn  = Math.max(monthly * 23, 23);
 return { monthly, zanka, zankaMonthly, welcome, priceAfterDisc, payFor23, totalIfReturn };
 }
 
-function calcMinnaDisco(maxLineCount) {
-if (maxLineCount >= 3) return -1210;
-if (maxLineCount === 2) return -550;
+function calcMinnaDisco(familyCount) {
+if (familyCount === "3plus") return -1210;
+if (familyCount === "2") return -550;
 return 0;
 }
 
-function calcItems({ planId, hikariId, card, denki, tvOption, telOption, kakehoudai, maxLineCount }) {
+function calcItems({ planId, hikariId, card, denki, tvOption, telOption, kakehoudai, familyCount }) {
 const plan = PLANS.find(p => p.id === planId);
 if (!plan) return null;
 const hikari        = HIKARI.find(h => h.id === hikariId);
@@ -135,9 +135,9 @@ monthly.push({ label: telOption === "normal" ? "ドコモ光電話（通常）" 
 
 if (!isAhamo && !isU15) {
 if (plan.type === "max") {
-const disc = calcMinnaDisco(maxLineCount);
+const disc = calcMinnaDisco(familyCount);
 if (disc < 0) {
-const label = maxLineCount >= 3 ? "みんなドコモ割（3回線以上）" : "みんなドコモ割（2回線）";
+const label = familyCount === "3plus" ? "みんなドコモ割（3回線以上）" : "みんなドコモ割（2回線）";
 monthly.push({ label, amount: disc, type: "discount", hiwari: true });
 totalDiscount += disc;
 }
@@ -198,7 +198,7 @@ const l = lineList.map(l => [
   l.id, l.plan, l.hikari, l.card, l.denki ? 1 : 0,
   l.tvOption ? 1 : 0, l.telOption, l.kakehoudai,
   l.useDevice ? 1 : 0, l.selectedDevice, l.contractType,
-  l.useKaedoki ? 1 : 0, l.name, l.currentFee,
+  l.useKaedoki ? 1 : 0, l.name, l.currentFee, l.familyCount ?? "1",
 ]);
 return btoa(encodeURIComponent(JSON.stringify({ l, h: showHiwari ? 1 : 0, d: contractDay, n: nextId })));
 }
@@ -211,7 +211,7 @@ try {
       id: r[0], plan: r[1], hikari: r[2], card: r[3], denki: !!r[4],
       tvOption: !!r[5], telOption: r[6], kakehoudai: r[7], useDevice: !!r[8],
       selectedDevice: r[9], contractType: r[10], useKaedoki: !!r[11],
-      name: r[12], currentFee: r[13],
+      name: r[12], currentFee: r[13], familyCount: r[14] ?? "1",
     })),
     showHiwari: !!s.h, contractDay: s.d, nextId: s.n,
   };
@@ -251,6 +251,7 @@ setLineList(prev => prev.map(l => {
       (newIsAhamo && hikari?.notAhamo) ||
       (!newIsAhamo && hikari?.ahamoOnly);
     if (hikariInvalid) updated.hikari = "none";
+    if (newPlan?.type !== "max") updated.familyCount = "1";
   }
   return updated;
 }));
@@ -274,11 +275,6 @@ if (activeLineId === id) setActiveLineId(newList[0].id);
 setResults({}); setDeviceResults({});
 };
 
-const maxLineCount = lineList.filter(l => {
-const p = PLANS.find(p => p.id === l.plan);
-return p && p.type === "max";
-}).length;
-
 const calculate = () => {
 for (const line of lineList) {
 if (!line.plan) { setError(`回線${lineList.indexOf(line)+1}のスマホプランを選択してください`); return; }
@@ -287,7 +283,7 @@ if (line.useDevice && !line.selectedDevice) { setError(`回線${lineList.indexOf
 setError("");
 const newResults = {}, newDevResults = {};
 for (const line of lineList) {
-newResults[line.id] = calcItems({ planId: line.plan, hikariId: line.hikari, card: line.card, denki: line.denki, tvOption: line.tvOption, telOption: line.telOption, kakehoudai: line.kakehoudai, maxLineCount });
+newResults[line.id] = calcItems({ planId: line.plan, hikariId: line.hikari, card: line.card, denki: line.denki, tvOption: line.tvOption, telOption: line.telOption, kakehoudai: line.kakehoudai, familyCount: line.familyCount || "1" });
 if (line.useDevice && line.selectedDevice) {
 const dev = DEVICES.find(d => d.id === line.selectedDevice);
 newDevResults[line.id] = { device: dev, kaedoki: calcKaedoki(dev, line.contractType), contractType: line.contractType, useKaedoki: line.useKaedoki };
@@ -353,11 +349,6 @@ return (
         onChange={e => setActive("name", e.target.value)}
         style={{ width: "100%", boxSizing: "border-box", padding: "7px 10px", background: "#080810", border: "1px solid #1c1c28", borderRadius: 7, color: "#aaa", fontSize: 12, outline: "none", fontFamily: "inherit" }}
       />
-      {maxLineCount >= 2 && (
-        <p style={{ margin: "6px 0 0", fontSize: 10, color: "#44cc77" }}>
-          ✓ ドコモMAX系が{maxLineCount}回線 → みんなドコモ割 {maxLineCount >= 3 ? "−¥1,210" : "−¥550"}/月 自動適用
-        </p>
-      )}
     </div>
 
     <div style={{ padding: "6px 14px", background: "#1a0306", border: "1px solid #3a0010", borderRadius: 8 }}>
@@ -412,6 +403,28 @@ return (
             <Chip key={k.id} label={k.label} selected={activeLine.kakehoudai === k.id} accent="#ffaa33" onClick={() => setActive("kakehoudai", k.id)} />
           ))}
         </div>
+      </Card>
+    )}
+
+    {/* みんなドコモ割 */}
+    {selPlan?.type === "max" && (
+      <Card title="👨‍👩‍👧‍👦 みんなドコモ割">
+        <p style={{ margin: "0 0 8px", fontSize: 11, color: "#777" }}>家族のドコモユーザーは何回線ですか？（ご自身も1回線としてカウント）</p>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[
+            { id: "1",      label: "1回線\n（自分のみ）",    sub: "割引なし" },
+            { id: "2",      label: "2回線",                  sub: "−¥550/月" },
+            { id: "3plus",  label: "3回線以上",              sub: "−¥1,210/月" },
+          ].map(k => (
+            <Chip key={k.id} label={`${k.label}\n${k.sub}`} selected={activeLine.familyCount === k.id} accent="#44cc77" onClick={() => setActive("familyCount", k.id)} />
+          ))}
+        </div>
+        {activeLine.familyCount !== "1" && (
+          <p style={{ margin: "8px 0 0", fontSize: 10, color: "#44cc77" }}>
+            ✓ みんなドコモ割 {activeLine.familyCount === "3plus" ? "−¥1,210" : "−¥550"}/月 が適用されます
+          </p>
+        )}
+        <p style={{ margin: "8px 0 0", fontSize: 10, color: "#444" }}>※ ahamo・U15ははみんなドコモ割の対象外ですが、回線数のカウントには含まれます</p>
       </Card>
     )}
 
