@@ -6,24 +6,70 @@
     <title>ドコモ料金シミュレーター</title>
   <style>
     @media print {
+      /* ---- visibility trick: show only #results ---- */
       body * { visibility: hidden; }
       #results, #results * { visibility: visible; }
       .no-print { display: none !important; }
+
+      /* ---- layout ---- */
       #results {
         position: absolute; left: 0; top: 0;
         width: 100%; max-width: 100%;
-        padding: 20px;
+        padding: 16px 20px;
         box-sizing: border-box;
+        font-size: 11pt;
       }
+
+      /* show all line detail blocks regardless of active state */
+      .print-line-detail {
+        display: flex !important;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      /* prevent header button from being stranded alone at page end */
+      .print-line-header {
+        break-after: avoid;
+        page-break-after: avoid;
+      }
+
+      /* keep each card together when possible */
+      .print-line-block {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-bottom: 12px;
+      }
+
+      /* ---- color overrides: white bg, dark text ---- */
       #results * {
         background: white !important;
         color: #111 !important;
         border-color: #ccc !important;
       }
+
+      /* discount = dark green, base/option amounts = dark red */
       #results [style*="color: #44cc77"],
-      #results [style*="color: #44ee88"] { color: #1a7a3a !important; }
-      #results [style*="color: #ff"],
-      #results [style*="color: #cc"] { color: #cc0010 !important; }
+      #results [style*="color: #44ee88"] { color: #1a6e32 !important; }
+      #results [style*="color: #ff3333"],
+      #results [style*="color: #ff8888"],
+      #results [style*="color: #e60012"],
+      #results [style*="color: #cc0010"] { color: #b00010 !important; }
+      #results [style*="color: #ffaa33"],
+      #results [style*="color: #ff8800"],
+      #results [style*="color: #ff9944"] { color: #7a4800 !important; }
+      #results [style*="color: #8888ff"],
+      #results [style*="color: #88aaff"],
+      #results [style*="color: #4488ff"] { color: #1133aa !important; }
+      #results [style*="color: #ffaa33"],
+      #results [style*="color: #cc88ff"],
+      #results [style*="color: #88ccff"] { color: #224488 !important; }
+
+      /* remove interactive styling from buttons in print */
+      #results button {
+        cursor: default !important;
+        border: 1px solid #bbb !important;
+        border-radius: 6px !important;
+      }
     }
   </style>
   </head>

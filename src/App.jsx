@@ -661,15 +661,14 @@ return (
           if (!r) return null;
           const isAct = line.id === activeLineId;
           return (
-            <div key={line.id}>
+            <div key={line.id} className="print-line-block">
               {lineList.length > 1 && (
-                <button onClick={() => setActiveLineId(line.id)} style={{ width: "100%", padding: "8px 14px", marginBottom: 6, borderRadius: 8, textAlign: "left", border: isAct ? "2px solid #e60012" : "2px solid #1c1c28", background: isAct ? "#1a0306" : "#0a0a10", color: isAct ? "#ff8888" : "#555", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                <button onClick={() => setActiveLineId(line.id)} className="print-line-header" style={{ width: "100%", padding: "8px 14px", marginBottom: 6, borderRadius: 8, textAlign: "left", border: isAct ? "2px solid #e60012" : "2px solid #1c1c28", background: isAct ? "#1a0306" : "#0a0a10", color: isAct ? "#ff8888" : "#555", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
                   回線{idx+1}{line.name ? `（${line.name}）` : ""} — ¥{r.monthlyTotal.toLocaleString()}/月
-                  {!isAct && <span style={{ float: "right", fontSize: 10, color: "#333" }}>▼ 詳細</span>}
+                  {!isAct && <span className="no-print" style={{ float: "right", fontSize: 10, color: "#333" }}>▼ 詳細</span>}
                 </button>
               )}
-              {(isAct || lineList.length === 1) && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div className="print-line-detail" style={{ display: (isAct || lineList.length === 1) ? "flex" : "none", flexDirection: "column", gap: 10 }}>
                   {dr && <KaedokiResultCard dr={dr} planMonthly={r.monthlyTotal} />}
                   {Number(line.currentFee) > 0 && (() => {
                     const deviceMonthly = dr ? (dr.useKaedoki ? dr.kaedoki.monthly : Math.ceil(dr.kaedoki.priceAfterDisc / 24)) : 0;
@@ -771,7 +770,6 @@ return (
                     </div>
                   )}
                 </div>
-              )}
             </div>
           );
         })}
