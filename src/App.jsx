@@ -61,6 +61,13 @@ const totalIfReturn  = Math.max(monthly * 23, 23);
 return { monthly, zanka, zankaMonthly, welcome, priceAfterDisc, payFor23, totalIfReturn };
 }
 
+function getDeviceMonthly(deviceResult) {
+if (!deviceResult) return 0;
+return deviceResult.useKaedoki
+  ? deviceResult.kaedoki.monthly
+  : Math.ceil(deviceResult.kaedoki.priceAfterDisc / 24);
+}
+
 function calcMinnaDisco(familyCount) {
 if (familyCount === "3plus") return -1210;
 if (familyCount === "2") return -550;
@@ -305,11 +312,7 @@ const isU15      = selPlan?.type === "u15";
 const hasResults = Object.keys(results).length > 0;
 const totalMonthly = Object.values(results).reduce((s, r) => s + (r?.monthlyTotal || 0), 0);
 const totalInitial = Object.values(results).reduce((s, r) => s + (r?.initialTotal || 0), 0);
-const totalDevice  = Object.values(deviceResults).reduce((s, dr) => {
-  if (!dr) return s;
-  if (dr.useKaedoki) return s + dr.kaedoki.monthly;
-  return s + Math.ceil(dr.kaedoki.priceAfterDisc / 24);
-}, 0);
+const totalDevice  = Object.values(deviceResults).reduce((s, dr) => s + getDeviceMonthly(dr), 0);
 const totalCurrentFee  = lineList.reduce((s, l) => s + (Number(l.currentFee) || 0), 0);
 const hasAnyCurrentFee = lineList.some(l => Number(l.currentFee) > 0);
 
@@ -583,7 +586,7 @@ return (
       <div className="no-print" style={{ display: "flex", gap: 8 }}>
         <button
           onClick={() => {
-            const url = `${location.origin}${location.pathname}?s=${encodeState(lineList, showHiwari, contractDay, nextId)}`;
+            const url = `${location.origin}${location.pathname}?s=${encodeURIComponent(encodeState(lineList, showHiwari, contractDay, nextId))}`;
             navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); });
           }}
           style={{ flex: 1, padding: "11px", borderRadius: 8, border: `1px solid ${copied ? "#336633" : "#1c1c28"}`, background: copied ? "#0a1a0a" : "#0f0f17", color: copied ? "#44cc77" : "#aaa", fontSize: 13, cursor: "pointer", transition: "all 0.2s" }}>
@@ -615,7 +618,7 @@ return (
                       <span style={{ fontSize: 12, color: "#666" }}>回線{idx+1}{line.name ? `（${line.name}）` : ""}</span>
                       <span style={{ fontSize: 12, fontWeight: 600, color: "#e4e4f0" }}>
                         ¥{r.monthlyTotal.toLocaleString()}
-                        {dr?.useKaedoki && <span style={{ color: "#8888ff", marginLeft: 4 }}>+端末¥{dr.kaedoki.monthly.toLocaleString()}</span>}
+                        {getDeviceMonthly(dr) > 0 && <span style={{ color: "#8888ff", marginLeft: 4 }}>+端末¥{getDeviceMonthly(dr).toLocaleString()}</span>}
                       </span>
                     </div>
                   );
@@ -671,7 +674,7 @@ return (
               <div className="print-line-detail" style={{ display: (isAct || lineList.length === 1) ? "flex" : "none", flexDirection: "column", gap: 10 }}>
                   {dr && <KaedokiResultCard dr={dr} planMonthly={r.monthlyTotal} />}
                   {Number(line.currentFee) > 0 && (() => {
-                    const deviceMonthly = dr ? (dr.useKaedoki ? dr.kaedoki.monthly : Math.ceil(dr.kaedoki.priceAfterDisc / 24)) : 0;
+                    const deviceMonthly = getDeviceMonthly(dr);
                     const newFee = r.monthlyTotal + deviceMonthly;
                     const current = Number(line.currentFee);
                     const diff = newFee - current;
@@ -755,8 +758,8 @@ return (
                       </ResultCard>
                     );
                   })()}
-                  {r.uWariInfo && <UWariTimelineCard info={r.uWariInfo} deviceMonthly={dr?.useKaedoki ? dr.kaedoki.monthly : 0} />}
-                  {r.u15Info && <U15TimelineCard info={r.u15Info} deviceMonthly={dr?.useKaedoki ? dr.kaedoki.monthly : 0} />}
+                  {r.uWariInfo && <UWariTimelineCard info={r.uWariInfo} deviceMonthly={getDeviceMonthly(dr)} />}
+                  {r.u15Info && <U15TimelineCard info={r.u15Info} deviceMonthly={getDeviceMonthly(dr)} />}
                   <ResultCard title={lineList.length > 1 ? `回線${idx+1} 初期費用` : "初期費用（事務手数料）"}>
                     <div style={{ padding: "14px 20px 4px" }}>
                       <p style={{ margin: "0 0 4px", fontSize: 11, color: "#555" }}>合計</p>
